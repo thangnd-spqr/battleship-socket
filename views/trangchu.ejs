@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Domo Socket IO</title>
+	<meta charset="utf-8">
+	<script src="jquery.min.js" type="text/javascript"></script>
+	<script src="socket.io/socket.io.js"></script>
+	<link rel="stylesheet" type="text/css" href="layout.css">
+
+	<script>
+
+	//	var socket = io("http://localhost:3000");
+		var socket = io("3.0.18.199:3000");
+		socket.on("server send data", function(data){
+			$("#noidung").append(data+", ");
+		});
+
+		socket.on("server send verify", function(data){
+			if(data.status=='OKK') {
+				$("#register_form").hide();
+				$("#login_form").hide();
+				$("#log_out").show();
+				$("#current_user").html(data.n);
+				//alert(data.info);
+			}
+			else {
+				alert(data.info);
+			}
+		});
+		
+
+		socket.on("server send verify login", function(data){
+			if(data.status=='OK') {
+
+
+				var dem=0;
+
+				$("#login_form").hide();
+				$("#log_out").show();
+				$("#arr").show();
+				$("#current_user").html(data.info);
+				alert(data.info);
+				//
+				$("#wrapper1").html("");
+				$("#wrapper1").css("width","350px");
+				$("#wrapper1").css("height","350px");
+				$("#wrapper1").css("margin","auto");
+
+				for(var i=1; i<=100; i++) {
+					$("#wrapper1").append("<div class='oco' id="+i+"></div>");
+
+				}
+				
+				$("#wrapper2").html("");
+				$("#wrapper2").css("width","350px");
+				$("#wrapper2").css("height","350px");
+				$("#wrapper2").css("margin","auto");
+
+
+				for(var i=101; i<=200; i++) {
+					$("#wrapper2").append("<div class='oco' id="+i+"></div>");
+
+				}
+
+				$(".oco").css("width", "30px");
+				$(".oco").css("height", "30px");
+				$(".oco").css("background-color", "white");
+				$(".oco").css("border", "solid 1px black");
+				$(".oco").css("float", "left");
+				$(".oco").css("text-align", "center");
+
+				// $(".oco").click(function(){
+				// 	if($(this).html()=="") {
+				// 	dem++;
+				// 	if(dem%2==0)
+				// 	//alert("Hello!");
+				// 	$(this).html("X");
+				// 	else {
+				// 		$(this).html("O");
+				// 	}
+				// 	}
+				// });
+
+				// $(".oco").mouseover(function(){
+				// 	$(this).css("background-color", "green");
+				// });
+
+				// $(".oco").mouseout(function(){
+				// 	$(this).css("background-color", "white");
+				// });
+			}
+			else {
+				alert(data.info);
+			}
+		});
+
+		//Hien thi danh sach nhung nguoi dang online
+
+		socket.on("list_curr_user", function(data){
+
+			// var j=7;
+			// 	$("#1").html('C');
+			// 	$("#4").html('C');
+			// 	$("#"+j).html('d');
+			$("#list_people_online").html("");
+			data.forEach(function(i){
+				if(i.status==0) {
+					//+i.u_name+"--trang thai : "+i.status+"<button>Mời vào chơi</button>
+					$("#list_people_online").append("<div id="+i.u_name+">"+i.u_name+"--trang thai : "+i.status+"<button>Mời vào chơi</button></div>");
+					$("#"+i.u_name).click(function(){
+						socket.emit("select-partner", i.u_name);
+					});
+					
+				}
+				else {
+					$("#list_people_online").append("<div>"+i.u_name+"--Trang thai : Dang choi"+"</div>");
+				} 
+
+			});
+
+			
+		});
+
+		socket.on("game-finished", function() {
+			$(".oco").html("");
+			$(".oco").html("");
+		});
+		socket.on("choi-khong", function(data){
+			//alert("ok choi");
+			var cmf = confirm(data+" muon choi cung voi ban?");
+			//socket.emit("OK-choi", data);
+			if(cmf==true) {
+				socket.emit("OK-choi", data);//data la ten cua dua minh muon choi cung
+				//io.to(data.id).emit("OK-choi", data)
+			}
+			else {
+				socket.emit("K-Choi", data);
+				//alert("Nguoi nay khong muon choi cung voi ban, xem lai cach song cua minh!");
+			}
+		});
+
+		// socket.on("OK-choi", function(data){
+		// 	//alert("ok choi");
+		// 	var cmf = confirm(data.u_name+" muon choi cung voi ban?");
+		// });
+
+		//verify-logout
+
+		socket.on("verify-logout", function(data){
+			$("#register_form").hide();
+			$("#login_form").show();
+			$("#log_out").hide();
+			$("#arr").hide();
+			
+		});
+
+		socket.on("list_curr_gp", function(data){
+			$("#list_curr_gp").html("");
+			data.forEach(function(i){
+				if(i.is_verified==1 && i.u_name=='' && i.status==0) {//i.is_verified==1 && i.u_name=='' && 
+					$("#list_curr_gp").css("width","350px");
+					$("#list_curr_gp").css("margin","auto");
+					$("#list_curr_gp").append("<div class='list_gp'>"+i.gp_id+''+"</div>");
+				}
+				else if(i.status==1){
+					$("#list_curr_gp").css("width","350px");
+					$("#list_curr_gp").css("margin","auto");
+					$("#list_curr_gp").append("<div id="+i.gp_id+">"+i.gp_id+" dang duoc dung boi : "+i.u_name+"</div>");
+				}
+					
+			});
+
+			$(".list_gp").click(function(){
+						alert("nhan nut gp"+$(this).html());
+						$(this).css("background-color","red");
+						socket.emit("select-it",$(this).html());
+			
+					});
+
+		});
+
+		var cur_position = 101;
+		var temp = 0;
+		var so_lan_ban_trung=0;
+		var luocchoi=0;
+		function check_correct(c, arr) {
+			for(var i=0; i<5; i++) {
+				if(c==arr[i]) return 1;
+			}
+			return 0;
+		}
+
+		socket.on("lua-toa-do", function(data){
+			//alert("nhan dc toa do tu esp " +data);
+			if(data==6) {
+				$("#"+cur_position).css("background-color", "white");
+				cur_position++;
+				if(cur_position<201 ) {
+					//if($("#"+cur_position).html()=='')
+						$("#"+cur_position).css("background-color","red");//.html('B');
+				}
+				else cur_position --;
+			}
+			else if(data==4) {
+				$("#"+cur_position).css("background-color", "white");
+				cur_position--;
+				if(cur_position>100 ) {
+					//if($("#"+cur_position).html()=='')
+						$("#"+cur_position).css("background-color","red");//.html('B');
+				}
+				else cur_position ++;
+			}
+			else if(data==2) {
+				$("#"+cur_position).css("background-color", "white");
+				cur_position=cur_position-10;
+				if(cur_position>100 ) {
+					//if($("#"+cur_position).html()=='')
+						$("#"+cur_position).css("background-color","red");//.html('B');
+				}
+				else cur_position=cur_position+10;
+			}
+			else if(data==8) {
+				$("#"+cur_position).css("background-color", "white");
+				cur_position=cur_position+10;
+				if(cur_position<201 ) {
+					//if($("#"+cur_position).html()=='')
+						$("#"+cur_position).css("background-color","red");//.html('B');
+				}
+				else cur_position=cur_position-10;
+			}
+			else if(data==5)  {
+				if($("#"+cur_position).html()!='T'||$("#"+cur_position).html()!='K') {
+					if(check_correct(cur_position-100, toa_do_e)==1) {
+						$("#"+cur_position).html('T');
+						socket.emit("correct", cur_position);
+						luocchoi=1;
+				     		$("#your_turn").html("Luot choi cua ban : 1");
+						so_lan_ban_trung++;
+					}
+					else {
+						$("#"+cur_position).html('K');
+						socket.emit("incorrect", cur_position);
+				     		$("#your_turn").html("Luot choi cua ban : 0");
+						luocchoi=0;
+					}
+
+					socket.emit("luoc-choi", luocchoi);
+					//kiem tra xem da endgame dc chua???
+					//code
+					if(so_lan_ban_trung==5) {
+						//Gui tin hieu ket thuc tro choi
+						so_lan_ban_trung=0;
+						luocchoi=0;
+						alert("End-Game");
+						socket.emit("end-game");
+					}
+				}
+				
+				
+			}
+
+		});
+
+		socket.on("luoc-choi-truoc", function(data){
+			alert("Ban duoc choi truoc, moi chon vi tri!");
+		});
+
+		// socket.on("toi-luoc-ban", function(data){
+		// 	alert("Toi luoc ban ban, chon vi tri!");
+		// 	socket.emit("toi-luot-toi",1);
+		// });
+
+		socket.on("bi-ban-trung", function(data){
+			alert("Ban bi ban trung");
+			$("#"+(data-100)).html('t');
+		});
+
+		socket.on("ban-khong-trung", function(data){
+			$("#your_turn").html("Luot choi cua ban : 1");	
+			$("#"+(data-100)).html('k');
+		});
+
+		//"ds-toa-do"
+		var toa_do_=[];//cua minh
+		var toa_do_e=[];//toa do cua quan dich
+		socket.on("ds-toa-do", function(data){//Data la mang toa do duoc sinh ra ngau nhien
+			alert("ds-toa-do");
+			var pos_begin = data['ta'][0];
+			var dir = data['ta'][2];
+
+			var pos_begin_e = data['dich'][0];			
+			var dir_e = data['dich'][2];
+			if(dir_e==0) {
+				//Them toa do nay vao de kiem tra ban trung k?
+				toa_do_e[0]=pos_begin_e;
+				toa_do_e[1]=pos_begin_e+10;
+				toa_do_e[2]=pos_begin_e+20;
+				toa_do_e[3]=pos_begin_e+30;
+				toa_do_e[4]=pos_begin_e+40;
+
+				$("#"+(pos_begin_e+100)).html('1');
+				$("#"+(pos_begin_e+10+100)).html('1');
+				$("#"+(pos_begin_e+20+100)).html('1');
+				$("#"+(pos_begin_e+30+100)).html('1');
+				$("#"+(pos_begin_e+40+100)).html('1');
+			}
+			else {
+				toa_do_e[0]=pos_begin_e;
+				toa_do_e[1]=pos_begin_e+1;
+				toa_do_e[2]=pos_begin_e+2;
+				toa_do_e[3]=pos_begin_e+3;
+				toa_do_e[4]=pos_begin_e+4;
+
+
+				$("#"+(pos_begin_e+100)).html('1');
+				$("#"+(pos_begin_e+1+100)).html('1');
+				$("#"+(pos_begin_e+2+100)).html('1');
+				$("#"+(pos_begin_e+3+100)).html('1');
+				$("#"+(pos_begin_e+4+100)).html('1');
+
+			}
+
+			if(dir==0) {
+				$("#"+(pos_begin)).html('1');
+				$("#"+(pos_begin+10)).html('1');
+				$("#"+(pos_begin+20)).html('1');
+				$("#"+(pos_begin+30)).html('1');
+				$("#"+(pos_begin+40)).html('1');
+				
+			}
+			else {
+				$("#"+(pos_begin)).html('1');
+				$("#"+(pos_begin+1)).html('1');
+				$("#"+(pos_begin+2)).html('1');
+				$("#"+(pos_begin+3)).html('1');
+				$("#"+(pos_begin+4)).html('1');			
+				
+			}
+			
+		});
+
+		$(document).ready(function(){
+			$("#register_form").hide();
+			$("#login_form").show();
+			$("#log_out").hide();
+			$("#arr").hide();
+			$("#btn_dangky").click(function(){
+				if($("#pass1").val()==$("#pass2").val() && $("#pass1").val()!='') {
+					socket.emit("dang-ky", {"u_name":$("#username").val(), "email":$("#email").val(), "pass":$("#pass1").val()});
+				}
+				else {
+					//xuat ra thong bao co 1 cai gi do k dung
+					alert("Xác nhận sai mật khẩu1");
+				}
+				
+			});
+
+			$("#btn_login").click(function(){
+				if($("#txt_uname").val()!='' && $("#txt_pass").val()!='') {
+					socket.emit("dang-nhap", {"u_name":$("#txt_uname").val(), "pass":$("#txt_pass").val()});
+				}
+				else {
+					//xuat ra thong bao co 1 cai gi do k dung
+					alert("Mat khau hoac ten khong duoc de trong");
+				}
+				
+			});
+
+			$("#logout").click(function(){		
+				socket.emit("log-out");
+				
+			});
+
+			$("#btn_singup").click(function(){
+				$("#register_form").show();
+				$("#login_form").hide();
+				$("#log_out").hide();
+				$("#arr").hide();
+			});
+
+			$(".oco").mouseout(function(){
+				$(this).css("background-color", "white");
+			});
+
+		});
+	</script>
+
+</head>
+<body>
+	<div id="wrapper">
+		<div id="register_form">
+			<h1>Tên của bạn là gì?</h1>
+			<div>
+				<input type="text" id="username" placeholder="Nhập họ tên">
+			</div>
+
+			<div>
+				<input type="type" id="email" placeholder="Nhập email">
+			</div>
+
+			<div>
+				<input type="password" id="pass1" placeholder="Nhập mật khẩu">
+			</div>
+
+			<div>
+				<input type="password" id="pass2" placeholder="Nhập lại mật khẩu">
+			</div>
+			
+			<div>
+				<input type="button" value="Đăng ký" id="btn_dangky">
+			</div>
+		</div>
+
+		<div id="login_form">
+			<div id="username_login">
+				<input type="text" id="txt_uname" placeholder="Nhap ten dang nhap-username">
+				<input type="password" id="txt_pass" placeholder="Nhap mat khau">
+				<input type="button" id="btn_login" value="Dang nhap">
+				<p>Chua co tai khoan?<br> Dang ky</p>
+				<input type="button" id="btn_singup" value="Dang ky">
+			</div>
+		</div>
+
+		<div id="log_out">
+			<div id="current_user">you</div>
+			<input type="button" id = "logout" value="Đăng xuất">
+			<p>Đang trực tuyến</p>
+			<div id="list_people_online"></div><br>
+			<p>Danh sách thiết bị sẵn có</p>
+			<div id="list_curr_gp"></div>
+
+		</div>
+
+		<div id="arr">
+
+			<table border="1">
+				<tr>
+					<td><p>Ban do cua ban<div id="your_turn">Luot choi</div></p>
+						
+						<div id="wrapper1">
+						</div>
+					</td>
+					<td><p>Ban do cua doi phuong</p>
+						<div id="wrapper2">
+						</div>
+					</td>
+				</tr>
+			</table>
+			
+		</div>
+
+		
+
+	</div>
+
+	
+	
+</body>
+</html>
